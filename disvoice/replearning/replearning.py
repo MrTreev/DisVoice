@@ -1,20 +1,23 @@
 import os
 import sys
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy.stats as st
-import matplotlib.pyplot as plt
+import torch
+from tqdm import tqdm
+
+from ..disvoice_utils import get_dict, save_dict_kaldimat
+from ..script_mananger import script_manager
+from .AEspeech import AEspeech
+
 plt.rcParams["font.family"] = "Times New Roman"
 
 PATH = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.join(PATH, '..'))
+sys.path.append(os.path.join(PATH, ".."))
 sys.path.append(PATH)
-from disvoice_utils import save_dict_kaldimat, get_dict
-from AEspeech import AEspeech
-from script_mananger import script_manager
-import torch
-from tqdm import tqdm
+
 
 class RepLearning:
     """
@@ -56,26 +59,29 @@ class RepLearning:
     """
 
     def __init__(self, model):
-        self.size_bottleneck=256
-        self.AEspeech=AEspeech(model, self.size_bottleneck)
-        self.statistics=["mean", "std", "skewness", "kurtosis"]
+        self.size_bottleneck = 256
+        self.AEspeech = AEspeech(model, self.size_bottleneck)
+        self.statistics = ["mean", "std", "skewness", "kurtosis"]
 
-        feat_names_bottle=["bottleneck_"+str(k) for k in range(self.size_bottleneck)]
-        feat_names_error=["error_"+str(k) for k in range(128)]
-        feat_names_bottle_all=[]
-        feat_names_error_all=[]
+        feat_names_bottle = [
+            "bottleneck_" + str(k) for k in range(self.size_bottleneck)
+        ]
+        feat_names_error = ["error_" + str(k) for k in range(128)]
+        feat_names_bottle_all = []
+        feat_names_error_all = []
 
         for k in self.statistics:
             for j in feat_names_bottle:
-                feat_names_bottle_all.append(k+"_"+j)
+                feat_names_bottle_all.append(k + "_" + j)
             for j in feat_names_error:
-                feat_names_error_all.append(k+"_"+j)
+                feat_names_error_all.append(k + "_" + j)
 
-        self.head_st=feat_names_bottle_all+feat_names_error_all
-        self.head_dyn=np.hstack(feat_names_bottle+feat_names_error)
+        self.head_st = feat_names_bottle_all + feat_names_error_all
+        self.head_dyn = np.hstack(feat_names_bottle + feat_names_error)
 
-
-    def extract_features_file(self, audio, static=True, plots=False, fmt="npy", kaldi_file=""):
+    def extract_features_file(
+        self, audio, static=True, plots=False, fmt="npy", kaldi_file=""
+    ):
         """
         Extract the representation learning features from an audio file
 
@@ -101,42 +107,48 @@ class RepLearning:
         >>> replearning.extract_features_path(path_audio, static=False, plots=False, fmt="kaldi", kaldi_file="./test.ark")
 
         """
-        if static and fmt=="kaldi":
+        if static and fmt == "kaldi":
             raise ValueError("Kaldi is only supported for dynamic features")
-        hb=self.AEspeech.compute_bottleneck_features(audio)
-        err=self.AEspeech.compute_rec_error_features(audio)
+        hb = self.AEspeech.compute_bottleneck_features(audio)
+        err = self.AEspeech.compute_rec_error_features(audio)
         if plots:
             self.AEspeech.plot_spectrograms(audio)
         if static:
-            bottle_feat=np.hstack((np.mean(hb, 0), np.std(hb, 0), st.skew(hb, 0), st.kurtosis(hb, 0)))
-            error_feat=np.hstack((np.mean(err, 0), np.std(err, 0), st.skew(err, 0), st.kurtosis(err, 0)))
-            feat=np.hstack((bottle_feat, error_feat))
-            feat=np.expand_dims(feat, axis=0)
-            head=self.head_st
+            bottle_feat = np.hstack(
+                (np.mean(hb, 0), np.std(hb, 0), st.skew(hb, 0), st.kurtosis(hb, 0))
+            )
+            error_feat = np.hstack(
+                (np.mean(err, 0), np.std(err, 0), st.skew(err, 0), st.kurtosis(err, 0))
+            )
+            feat = np.hstack((bottle_feat, error_feat))
+            feat = np.expand_dims(feat, axis=0)
+            head = self.head_st
         else:
-            feat=np.concatenate((hb, err), axis=1)
-            head=self.head_dyn
-        if fmt in("npy","txt"):
+            feat = np.concatenate((hb, err), axis=1)
+            head = self.head_dyn
+        if fmt in ("npy", "txt"):
             return feat
-        elif fmt in("dataframe","csv"):
-            dff={}
+        elif fmt in ("dataframe", "csv"):
+            dff = {}
             for e, key in enumerate(head):
-                dff[key]=feat[:,e]
-            dff=pd.DataFrame(dff)
+                dff[key] = feat[:, e]
+            dff = pd.DataFrame(dff)
             return dff
-        elif fmt=="torch":
+        elif fmt == "torch":
             return torch.from_numpy(feat)
-        elif fmt=="kaldi":
-            name_all=audio.split('/')
-            dictX={name_all[-1]:feat}
+        elif fmt == "kaldi":
+            name_all = audio.split("/")
+            dictX = {name_all[-1]: feat}
             save_dict_kaldimat(dictX, kaldi_file)
         else:
-            raise ValueError(fmt+" is not supported")
+            raise ValueError(fmt + " is not supported")
 
-    def extract_features_path(self, path_audio, static=True, plots=False, fmt="npy", kaldi_file=""):
+    def extract_features_path(
+        self, path_audio, static=True, plots=False, fmt="npy", kaldi_file=""
+    ):
         """
         Extract the representation learning features for audios inside a path
-        
+
         :param path_audio: directory with (.wav) audio files inside, sampled at 16 kHz
         :param static: whether to compute and return statistic functionals over the feature matrix, or return the feature matrix computed over frames
         :param plots: timeshift to extract the features
@@ -151,55 +163,59 @@ class RepLearning:
         >>> features3=phonological.replearning(path_audio, static=False, plots=True, fmt="torch")
         >>> replearning.extract_features_path(path_audio, static=False, plots=False, fmt="kaldi", kaldi_file="./test.ark")
         """
-        if static and fmt=="kaldi":
+        if static and fmt == "kaldi":
             raise ValueError("Kaldi is only supported for dynamic features")
-        hf=os.listdir(path_audio)
+        hf = os.listdir(path_audio)
         hf.sort()
 
-        pbar=tqdm(range(len(hf)))
-        ids=[]
+        pbar = tqdm(range(len(hf)))
+        ids = []
 
-        Features=[]
+        Features = []
         for j in pbar:
             pbar.set_description("Processing %s" % hf[j])
-            audio_file=path_audio+hf[j]
-            feat=self.extract_features_file(audio_file, static=static, plots=plots, fmt="npy")
+            audio_file = path_audio + hf[j]
+            feat = self.extract_features_file(
+                audio_file, static=static, plots=plots, fmt="npy"
+            )
             Features.append(feat)
             if static:
                 ids.append(hf[j])
             else:
                 ids.append(np.repeat(hf[j], feat.shape[0]))
-        
-        Features=np.vstack(Features)
-        ids=np.hstack(ids)
+
+        Features = np.vstack(Features)
+        ids = np.hstack(ids)
 
         if static:
-            head=self.head_st
+            head = self.head_st
         else:
-            head=self.head_dyn
+            head = self.head_dyn
 
-        if fmt in("npy","txt"):
+        if fmt in ("npy", "txt"):
             return Features
-        if fmt in("dataframe","csv"):
-            df={}
+        if fmt in ("dataframe", "csv"):
+            df = {}
             for e, k in enumerate(head):
-                df[k]=Features[:,e]
-            df["id"]=ids
+                df[k] = Features[:, e]
+            df["id"] = ids
             return pd.DataFrame(df)
-        if fmt=="torch":
+        if fmt == "torch":
             return torch.from_numpy(Features)
-        if fmt=="kaldi":
-            dictX=get_dict(Features, ids)
+        if fmt == "kaldi":
+            dictX = get_dict(Features, ids)
             save_dict_kaldimat(dictX, kaldi_file)
         else:
-            raise ValueError(fmt+" is not supported")
+            raise ValueError(fmt + " is not supported")
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
 
-    if len(sys.argv)!=7:
-        print("python replearning.py <file_or_folder_audio> <file_features> <static (true, false)> <plots (true,  false)> <format (csv, txt, npy, kaldi, torch)> <model (CAE,RAE)>")
+    if len(sys.argv) != 7:
+        print(
+            "python replearning.py <file_or_folder_audio> <file_features> <static (true, false)> <plots (true,  false)> <format (csv, txt, npy, kaldi, torch)> <model (CAE,RAE)>"
+        )
         sys.exit()
 
-    replearning=RepLearning(sys.argv[-1])
+    replearning = RepLearning(sys.argv[-1])
     script_manager(sys.argv, replearning)

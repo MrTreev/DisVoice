@@ -4,9 +4,9 @@
 
 ![Image](https://github.com/jcvasquezc/DisVoice/blob/master/docs/logos/disvoice_logo.png?raw=true)
 
-DisVoice is a python framework designed to compute features from speech files. Disvoice computes glottal, phonation, articulation, prosody, phonological, and features representation learnig strategies using autoencders. The features can be computed both from sustained vowels and continuous speech utterances with the aim to recognize praliguistic aspects from speech.
+DisVoice is a python framework designed to compute features from speech files. Disvoice computes glottal, phonation, articulation, prosody, phonological, and features representation learning strategies using autoencders. The features can be computed both from sustained vowels and continuous speech utterances with the aim to recognize paralinguistic aspects from speech.
 
-The features can be used in classifiers to recognize emotions, or communication capabilities of patients with different speech disorders including diseases with functional origin such as larinx cancer or nodules; craneo-facial based disorders such as hipernasality developed by cleft-lip and palate; or neurodegenerative disorders such as Parkinson's or Hungtinton's diseases.
+The features can be used in classifiers to recognize emotions, or communication capabilities of patients with different speech disorders including diseases with functional origin such as larynx cancer or nodules; craneo-facial based disorders such as hypernasality developed by cleft-lip and -palate; or neurodegenerative disorders such as Parkinson's or Hungtinton's diseases.
 
 The features are also suitable to evaluate mood problems like depression based on speech patterns.
 
@@ -15,16 +15,16 @@ For additional details about each feature type, and how to use DisVoice, please 
 - [glottal](https://github.com/jcvasquezc/DisVoice/tree/master/disvoice/glottal)
 - [phonation](https://github.com/jcvasquezc/DisVoice/tree/master/disvoice/phonation)
 - [articulaton](https://github.com/jcvasquezc/DisVoice/tree/master/disvoice/articulation)
-- [prosody](https://github.com/jcvasquezc/DisVoice/tree/master/disvoice/prosody) 
+- [prosody](https://github.com/jcvasquezc/DisVoice/tree/master/disvoice/prosody)
 - [phonological](https://github.com/jcvasquezc/DisVoice/tree/master/disvoice/phonological)
 - [Representation learning](https://github.com/jcvasquezc/DisVoice/tree/master/disvoice/replearning)
 
 
 ### Install
 
-Praat should be installed first, and the executable file should be added as an environmental variable. 
+Praat should be installed first, and the executable file should be added as an environmental variable.
 
-For linux
+For Linux:
 
 ```
 apt-get install praat
@@ -37,9 +37,9 @@ or
 
 For Windows
 
-Donwload the latest version of Praat from https://www.fon.hum.uva.nl/praat/download_win.html
+Download the latest version of Praat from https://www.fon.hum.uva.nl/praat/download_win.html
 
-and add the path file to the environment variables
+Add the path file to the environment variables
 
 Then
 
@@ -53,7 +53,7 @@ or
 
 
 
-Kaldi must be installed beforehand for Kaldi output  
+Kaldi must be installed beforehand for Kaldi output
 
 ## Reference
 

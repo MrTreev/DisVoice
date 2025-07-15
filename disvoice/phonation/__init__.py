@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
+__all__ = ["Phonation"]
 
 from .phonation import Phonation
-from .phonation_functions import *
-
-
-__all__=["Phonation"]

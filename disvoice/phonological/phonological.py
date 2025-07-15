@@ -1,35 +1,36 @@
-
-# -*- coding: utf-8 -*-
 """
 Created on Jun 24 2020
 
 @author: J. C. Vasquez-Correa
 """
+
 import os
 import sys
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import scipy.stats as st
+import torch
 from phonet.phonet import Phonet
 from phonet.phonet import Phonological as phon
-import scipy.stats as st
-import matplotlib.pyplot as plt
+from tqdm import tqdm
+
+from ..disvoice_utils import get_dict, save_dict_kaldimat
+from ..script_mananger import script_manager
+
 plt.rcParams["font.family"] = "Times New Roman"
 
 PATH = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.join(PATH, '..'))
+sys.path.append(os.path.join(PATH, ".."))
 sys.path.append(PATH)
-from disvoice_utils import save_dict_kaldimat, get_dict
 
-from script_mananger import script_manager
-import torch
-from tqdm import tqdm
 
 class Phonological:
     """
     Compute phonological features from continuous speech files.
 
-    18 descriptors are computed, bases on 18 different phonological classes from the phonet toolkit 
+    18 descriptors are computed, bases on 18 different phonological classes from the phonet toolkit
     https://phonet.readthedocs.io/en/latest/?badge=latest
 
     It computes the phonological log-likelihood ratio features from phonet
@@ -68,16 +69,18 @@ class Phonological:
     """
 
     def __init__(self):
-        phonolist=phon()
-        self.head_dyn=phonolist.get_list_phonological_keys()
-        self.statistics=["mean", "std", "skewness", "kurtosis", "max", "min"]
-        self.head_st=[]
+        phonolist = phon()
+        self.head_dyn = phonolist.get_list_phonological_keys()
+        self.statistics = ["mean", "std", "skewness", "kurtosis", "max", "min"]
+        self.head_st = []
         for j in self.head_dyn:
             for l in self.statistics:
-                self.head_st.append(j+"_"+l)
-        self.phon=Phonet(["all"])
+                self.head_st.append(j + "_" + l)
+        self.phon = Phonet(["all"])
 
-    def extract_features_file(self, audio, static=True, plots=False, fmt="npy", kaldi_file=""):
+    def extract_features_file(
+        self, audio, static=True, plots=False, fmt="npy", kaldi_file=""
+    ):
         """Extract the phonological features from an audio file
 
         :param audio: .wav audio file.
@@ -102,52 +105,52 @@ class Phonological:
         >>> phonological.extract_features_path(path_audio, static=False, plots=False, fmt="kaldi", kaldi_file="./test.ark")
 
         """
-        if static and fmt=="kaldi":
+        if static and fmt == "kaldi":
             raise ValueError("Kaldi is only supported for dynamic features")
 
-        if audio.find('.wav') == -1 and audio.find('.WAV') == -1:
-            raise ValueError(audio+" is not a valid wav file")
-        
-        df=self.phon.get_PLLR(audio, plot_flag=plots)
+        if audio.find(".wav") == -1 and audio.find(".WAV") == -1:
+            raise ValueError(audio + " is not a valid wav file")
 
-        keys=df.keys().tolist()
-        keys.remove('time')
+        df = self.phon.get_PLLR(audio, plot_flag=plots)
+
+        keys = df.keys().tolist()
+        keys.remove("time")
 
         if static:
-            feat=[]
-            functions=[np.mean, np.std, st.skew, st.kurtosis, np.max, np.min]
+            feat = []
+            functions = [np.mean, np.std, st.skew, st.kurtosis, np.max, np.min]
             for j in keys:
                 for function in functions:
                     feat.append(function(df[j]))
-            feat=np.expand_dims(feat, axis=0)
+            feat = np.expand_dims(feat, axis=0)
 
         else:
-            feat=np.stack([df[k] for k in keys], axis=1)
+            feat = np.stack([df[k] for k in keys], axis=1)
 
-        if fmt in("npy","txt"):
+        if fmt in ("npy", "txt"):
             return feat
-        elif fmt in("dataframe","csv") and static:
+        elif fmt in ("dataframe", "csv") and static:
             dff = {}
             for e, k in enumerate(self.head_st):
                 dff[k] = feat[:, e]
             return pd.DataFrame(dff)
-        elif fmt in("dataframe","csv") and not static:
+        elif fmt in ("dataframe", "csv") and not static:
             return df
-        elif fmt=="torch":
+        elif fmt == "torch":
             return torch.from_numpy(feat)
-        elif fmt=="kaldi":
-            featmat=np.stack([df[k] for k in keys], axis=1)
-            name_all=audio.split('/')
-            dictX={name_all[-1]:featmat}
+        elif fmt == "kaldi":
+            featmat = np.stack([df[k] for k in keys], axis=1)
+            name_all = audio.split("/")
+            dictX = {name_all[-1]: featmat}
             save_dict_kaldimat(dictX, kaldi_file)
         else:
-            raise ValueError(fmt+" is not supported")
+            raise ValueError(fmt + " is not supported")
 
-
-
-    def extract_features_path(self, path_audio, static=True, plots=False, fmt="npy", kaldi_file=""):
+    def extract_features_path(
+        self, path_audio, static=True, plots=False, fmt="npy", kaldi_file=""
+    ):
         """Extract the phonological features for audios inside a path
-        
+
         :param path_audio: directory with (.wav) audio files inside, sampled at 16 kHz
         :param static: whether to compute and return statistic functionals over the feature matrix, or return the feature matrix computed over frames
         :param plots: timeshift to extract the features
@@ -163,29 +166,29 @@ class Phonological:
         >>> phonological.extract_features_path(path_audio, static=False, plots=False, fmt="kaldi", kaldi_file="./test.ark")
         """
 
-        hf=os.listdir(path_audio)
+        hf = os.listdir(path_audio)
         hf.sort()
 
-        pbar=tqdm(range(len(hf)))
-        ids=[]
+        pbar = tqdm(range(len(hf)))
+        ids = []
 
-        Features=[]
+        Features = []
         for j in pbar:
             pbar.set_description("Processing %s" % hf[j])
-            audio_file=path_audio+hf[j]
-            feat=self.extract_features_file(audio_file, static=static, plots=plots, fmt="npy")
+            audio_file = path_audio + hf[j]
+            feat = self.extract_features_file(
+                audio_file, static=static, plots=plots, fmt="npy"
+            )
             Features.append(feat)
             if static:
                 ids.append(hf[j])
             else:
                 ids.append(np.repeat(hf[j], feat.shape[0]))
-        
-        Features=np.vstack(Features)
-        ids=np.hstack(ids)
+
+        Features = np.vstack(Features)
+        ids = np.hstack(ids)
 
         return self.save_features(Features, ids, fmt, static, kaldi_file)
-
-
 
     def save_features(self, Features, ids, fmt, static, kaldi_file):
 
@@ -193,29 +196,31 @@ class Phonological:
             head = self.head_st
         else:
             head = self.head_dyn
-    
-        if fmt in("npy","txt"):
+
+        if fmt in ("npy", "txt"):
             return Features
-        elif fmt in("dataframe","csv"):
+        elif fmt in ("dataframe", "csv"):
             df = {}
             for e, k in enumerate(head):
                 df[k] = Features[:, e]
             df["id"] = ids
             return pd.DataFrame(df)
-        elif fmt=="torch":
+        elif fmt == "torch":
             return torch.from_numpy(Features)
-        elif fmt=="kaldi":
-            dictX=get_dict(Features, ids)
+        elif fmt == "kaldi":
+            dictX = get_dict(Features, ids)
             save_dict_kaldimat(dictX, kaldi_file)
         else:
-            raise ValueError(fmt+" is not supported")
+            raise ValueError(fmt + " is not supported")
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
 
-    if len(sys.argv)!=6:
-        print("python phonological.py <file_or_folder_audio> <file_features> <static (true, false)> <plots (true,  false)> <format (csv, txt, npy, kaldi, torch)>")
+    if len(sys.argv) != 6:
+        print(
+            "python phonological.py <file_or_folder_audio> <file_features> <static (true, false)> <plots (true,  false)> <format (csv, txt, npy, kaldi, torch)>"
+        )
         sys.exit()
 
-    phonological=Phonological()
+    phonological = Phonological()
     script_manager(sys.argv, phonological)

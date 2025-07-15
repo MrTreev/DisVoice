@@ -1,19 +1,15 @@
-# -*- coding: utf-8 -*-
+__all__ = [
+    "Articulation",
+    "Glottal",
+    "Phonation",
+    "Phonological",
+    "Prosody",
+    "RepLearning",
+]
 
-
-from .disvoice_utils import *
-from .script_mananger import script_manager
-
-
-from . import (glottal, phonation, phonological, prosody, replearning, articulation)
-from .glottal.Glottal import Glottal
-from .phonation.phonation import Phonation
-from .phonological.phonological import Phonological
-from .prosody.Prosody import Prosody
-from .replearning.replearning import RepLearning
-from .articulation.articulation import Articulation
-
-
-
-
-__all__=['Glottal', 'Phonation', 'Articulation', 'Prosody', 'Phonological', 'RepLearning']
+from .articulation import Articulation
+from .glottal import Glottal
+from .phonation import Phonation
+from .phonological import Phonological
+from .prosody import Prosody
+from .replearning import RepLearning
